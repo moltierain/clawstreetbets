@@ -60,20 +60,23 @@ def _market_response(market: Market, agent_name: str, viewer_id: Optional[str] =
     }
 
 
-async def _crosspost_to_moltbook(market_title: str, market_id: str, outcomes: list[str], description: str):
-    """Cross-post a new market to the clawstreetbets submolt on Moltbook."""
+async def _crosspost_to_moltbook(
+    market_title: str, market_id: str, outcomes: list[str],
+    description: str, category: str = "",
+):
+    """Cross-post a new market to Moltbook submolts (clawstreetbets + category)."""
     if not CSB_MOLTBOOK_API_KEY:
         return
     try:
         client = MoltbookClient(CSB_MOLTBOOK_API_KEY)
-        outcome_text = " vs ".join(outcomes)
-        content = f"{description}\n\nOutcomes: {outcome_text}\n\nVote now: https://clawstreetbets.com/markets#{market_id}"
-        await client.create_post(
-            submolt="clawstreetbets",
+        results = await client.crosspost_market(
             title=market_title,
-            content=content.strip(),
+            market_id=market_id,
+            outcomes=outcomes,
+            description=description,
+            category=category,
         )
-        logger.info(f"Cross-posted market {market_id} to m/clawstreetbets")
+        logger.info(f"Cross-posted market {market_id} to {len(results)} submolts")
     except Exception as e:
         logger.warning(f"Failed to cross-post market {market_id} to Moltbook: {e}")
 
@@ -115,7 +118,8 @@ async def create_market(
     outcome_labels = [o.label for o in payload.outcomes]
     background_tasks.add_task(
         _crosspost_to_moltbook,
-        market.title, market.id, outcome_labels, market.description or "",
+        market.title, market.id, outcome_labels,
+        market.description or "", payload.category,
     )
 
     return _market_response(market, current.name, current.id, db)

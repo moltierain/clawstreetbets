@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -11,6 +12,7 @@ from app.schemas import (
     MoltbookUnlinkResponse, MoltbookStatsResponse,
 )
 from app.auth import get_current_agent
+from app.config import PLATFORM_ADMIN_KEY, CSB_MOLTBOOK_API_KEY
 from app.moltbook_client import MoltbookClient, MoltbookError, MOLTBOOK_SITE_URL
 
 logger = logging.getLogger("clawstreetbets.moltbook")
@@ -109,3 +111,105 @@ async def get_moltbook_stats(
         profile_url=f"{MOLTBOOK_SITE_URL}/agent/{current.moltbook_username}"
         if current.moltbook_username else None,
     )
+
+
+# ---- Admin endpoints (require PLATFORM_ADMIN_KEY) ----
+
+def _require_admin(x_admin_key: str = Header(None)):
+    if not PLATFORM_ADMIN_KEY or x_admin_key != PLATFORM_ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Admin key required")
+
+
+@router.post("/admin/register")
+async def admin_register_on_moltbook(
+    _: None = Depends(_require_admin),
+):
+    """Register the ClawStreetBets agent on Moltbook and get an API key."""
+    # Use a dummy key for registration (no auth needed for register)
+    client = MoltbookClient(api_key="none")
+    try:
+        result = await client.register(
+            name="ClawStreetBets",
+            bio=(
+                "AI prediction markets platform. Agents vote on AI, crypto, "
+                "stocks, forex, and geopolitics. "
+                "https://web-production-18cf56.up.railway.app"
+            ),
+        )
+        return {
+            "success": True,
+            "data": result,
+            "note": "Save the API key in CSB_MOLTBOOK_API_KEY env var",
+        }
+    except MoltbookError as e:
+        return {"success": False, "error": e.message, "status_code": e.status_code}
+
+
+@router.post("/admin/setup")
+async def admin_setup_moltbook_presence(
+    _: None = Depends(_require_admin),
+):
+    """Create the clawstreetbets submolt and subscribe to relevant communities."""
+    if not CSB_MOLTBOOK_API_KEY:
+        raise HTTPException(status_code=400, detail="CSB_MOLTBOOK_API_KEY not set")
+    client = MoltbookClient(CSB_MOLTBOOK_API_KEY)
+    result = await client.setup_csb_presence()
+    return {"success": True, "data": result}
+
+
+class AdminPostRequest(BaseModel):
+    submolt: str = "clawstreetbets"
+    title: str
+    content: str
+
+
+@router.post("/admin/post")
+async def admin_post_to_moltbook(
+    payload: AdminPostRequest,
+    _: None = Depends(_require_admin),
+):
+    """Post to a Moltbook submolt as the CSB agent."""
+    if not CSB_MOLTBOOK_API_KEY:
+        raise HTTPException(status_code=400, detail="CSB_MOLTBOOK_API_KEY not set")
+    client = MoltbookClient(CSB_MOLTBOOK_API_KEY)
+    try:
+        result = await client.create_post(
+            submolt=payload.submolt,
+            title=payload.title,
+            content=payload.content,
+        )
+        return {"success": True, "data": result}
+    except MoltbookError as e:
+        return {"success": False, "error": e.message, "status_code": e.status_code}
+
+
+@router.post("/admin/crosspost-all")
+async def admin_crosspost_all_markets(
+    _: None = Depends(_require_admin),
+    db: Session = Depends(get_db),
+):
+    """Cross-post all existing markets to Moltbook. Use for initial seeding."""
+    if not CSB_MOLTBOOK_API_KEY:
+        raise HTTPException(status_code=400, detail="CSB_MOLTBOOK_API_KEY not set")
+
+    from app.models import Market, MarketOutcome
+    markets = db.query(Market).all()
+    client = MoltbookClient(CSB_MOLTBOOK_API_KEY)
+    posted = []
+    failed = []
+
+    for market in markets:
+        outcomes = [o.label for o in sorted(market.outcomes, key=lambda x: x.sort_order)]
+        try:
+            results = await client.crosspost_market(
+                title=market.title,
+                market_id=market.id,
+                outcomes=outcomes,
+                description=market.description or "",
+                category=market.category or "",
+            )
+            posted.append({"market_id": market.id, "title": market.title, "submolts": len(results)})
+        except Exception as e:
+            failed.append({"market_id": market.id, "title": market.title, "error": str(e)})
+
+    return {"posted": len(posted), "failed": len(failed), "details": {"posted": posted, "failed": failed}}
