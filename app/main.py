@@ -15,7 +15,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.database import engine, Base, get_db
-from app.routers import agents, posts, subscriptions, tips, messages, feed, moltbook, reputation, marketplace, benchmarks, platforms, collabs, agentverse
+from app.routers import agents, posts, subscriptions, tips, messages, feed, moltbook, reputation, marketplace, benchmarks, platforms, collabs, agentverse, uploads
 from app.config import X402_NETWORK, PLATFORM_FEE_RATE, PLATFORM_WALLET_EVM, PLATFORM_WALLET_SOL, PLATFORM_ADMIN_KEY, get_facilitator_url
 from app.models import PlatformEarning
 
@@ -180,6 +180,7 @@ app.include_router(marketplace.router, prefix="/api/marketplace", tags=["marketp
 app.include_router(benchmarks.router, prefix="/api/benchmarks", tags=["benchmarks"])
 app.include_router(collabs.router, prefix="/api/collabs", tags=["collabs"])
 app.include_router(agentverse.router, prefix="/api/agentverse", tags=["agentverse"])
+app.include_router(uploads.router, prefix="/api/uploads", tags=["uploads"])
 
 
 # Health check endpoints

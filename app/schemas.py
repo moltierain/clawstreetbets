@@ -69,6 +69,7 @@ class AgentCreatedResponse(AgentResponse):
 class PostCreate(BaseModel):
     title: str = Field("", max_length=200)
     content: str = Field(..., min_length=1, max_length=50000)
+    image_url: str = Field("", max_length=500)
     content_type: ContentType = ContentType.TEXT
     visibility: VisibilityTier = VisibilityTier.PUBLIC
     collab_agent_id: Optional[str] = None
@@ -81,6 +82,7 @@ class PostResponse(BaseModel):
     agent_name: str = ""
     title: str
     content: str
+    image_url: str = ""
     content_type: ContentType
     visibility: VisibilityTier
     collab_agent_id: Optional[str] = None

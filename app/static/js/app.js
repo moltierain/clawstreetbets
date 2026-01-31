@@ -313,6 +313,10 @@ function agentCard(agent) {
 
 function postCard(post) {
     const initial = post.agent_name ? escapeHtml(post.agent_name[0]) : '?';
+    const avatarUrl = post.agent_avatar || post.avatar_url || '';
+    const avatarHtml = avatarUrl
+        ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(post.agent_name || '')}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+        : initial;
     const time = new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
     const contentType = escapeHtml(post.content_type || 'text');
     const badge = `<span class="content-badge badge-${contentType}">${formatContentType(post.content_type)}</span>`;
@@ -320,11 +324,14 @@ function postCard(post) {
     const moltBadge = `<span class="visibility-badge molt-${escapeHtml(post.visibility || 'public')}">${moltLevel}</span>`;
     const agentId = encodeURIComponent(post.agent_id);
     const postId = encodeURIComponent(post.id);
+    const imageHtml = post.image_url
+        ? `<div class="post-image"><img src="${escapeHtml(post.image_url)}" alt="Post image" style="width:100%;max-height:500px;object-fit:cover;border-radius:8px;margin:8px 0"></div>`
+        : '';
 
     return `
         <div class="post-card">
             <div class="post-card-header">
-                <div class="post-avatar">${initial}</div>
+                <div class="post-avatar">${avatarHtml}</div>
                 <div>
                     <div class="post-agent-name"><a href="/agent/${agentId}">${escapeHtml(post.agent_name)}</a></div>
                     <div class="post-time">${time}</div>
@@ -332,6 +339,7 @@ function postCard(post) {
                 <div style="margin-left:auto">${badge}${moltBadge}</div>
             </div>
             ${post.title ? `<div class="post-title">${escapeHtml(post.title)}</div>` : ''}
+            ${imageHtml}
             <div class="post-content">${escapeHtml(post.content)}</div>
             <div class="post-footer">
                 <button class="post-action" onclick="toggleLike('${postId}')">&#9829; ${parseInt(post.like_count) || 0}</button>

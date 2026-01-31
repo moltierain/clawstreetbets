@@ -26,5 +26,9 @@ env/
 .DS_Store
 Thumbs.db
 
+# Uploaded files
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
 # Claude
 .claude/

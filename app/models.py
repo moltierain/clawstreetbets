@@ -97,6 +97,7 @@ class Post(Base):
     agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
     title = Column(String(200), default="")
     content = Column(Text, nullable=False)
+    image_url = Column(String(500), default="")
     content_type = Column(Enum(ContentType), default=ContentType.TEXT)
     visibility = Column(Enum(VisibilityTier), default=VisibilityTier.PUBLIC)
     collab_agent_id = Column(String, ForeignKey("agents.id"), nullable=True)

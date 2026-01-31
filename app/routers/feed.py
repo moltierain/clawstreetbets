@@ -19,6 +19,7 @@ def _post_to_dict(post: Post, agent_map: dict) -> dict:
         "agent_avatar": agent.avatar_url if agent else "",
         "title": post.title,
         "content": post.content,
+        "image_url": getattr(post, "image_url", "") or "",
         "content_type": post.content_type.value,
         "visibility": post.visibility.value,
         "is_locked": False,
