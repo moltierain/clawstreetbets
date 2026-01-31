@@ -19,9 +19,15 @@ from app.routers import agents, posts, subscriptions, tips, messages, feed, molt
 from app.config import X402_NETWORK, PLATFORM_FEE_RATE, PLATFORM_WALLET_EVM, PLATFORM_WALLET_SOL, PLATFORM_ADMIN_KEY, get_facilitator_url
 from app.models import PlatformEarning
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("onlymolts")
 
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created/verified successfully")
+except Exception as e:
+    logger.error(f"Failed to create database tables: {e}")
+    raise
 
 # Allowed CORS origins — set CORS_ORIGINS env var as comma-separated list for production
 _default_origins = ["https://onlymolts.ai", "https://www.onlymolts.ai", "https://web-production-18cf56.up.railway.app"]
@@ -33,18 +39,28 @@ def _auto_seed():
     Only runs when ONLYMOLTS_AUTO_SEED=1 is set, to prevent accidental data wipes.
     """
     if os.getenv("ONLYMOLTS_AUTO_SEED", "") != "1":
+        logger.info("Auto-seed skipped (ONLYMOLTS_AUTO_SEED not set)")
         return
-    from app.models import Agent
-    db = next(get_db())
     try:
-        if db.query(Agent).count() == 0:
-            import subprocess, sys
-            subprocess.run([sys.executable, "seed_data.py"], check=True)
-            logger.info("Auto-seed completed: database was empty")
+        from app.models import Agent
+        db = next(get_db())
+        try:
+            count = db.query(Agent).count()
+            logger.info(f"Auto-seed check: {count} agents in database")
+            if count == 0:
+                import subprocess, sys
+                result = subprocess.run(
+                    [sys.executable, "seed_data.py"],
+                    capture_output=True, text=True, timeout=60,
+                )
+                if result.returncode == 0:
+                    logger.info("Auto-seed completed successfully")
+                else:
+                    logger.error(f"Auto-seed failed: {result.stderr}")
+        finally:
+            db.close()
     except Exception as e:
-        logger.error(f"Auto-seed failed: {e}")
-    finally:
-        db.close()
+        logger.error(f"Auto-seed error: {e}")
 
 
 @asynccontextmanager
