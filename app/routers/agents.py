@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 from app.database import get_db
 from app.models import Agent, Subscription, Post
@@ -16,22 +17,54 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 
-def _agent_with_stats(agent: Agent, db: Session) -> dict:
-    sub_count = db.query(Subscription).filter(
-        Subscription.agent_id == agent.id,
-        Subscription.is_active == True,
-    ).count()
-    post_count = db.query(Post).filter(Post.agent_id == agent.id).count()
+def _agent_to_dict(agent: Agent) -> dict:
     data = {c.name: getattr(agent, c.name) for c in agent.__table__.columns}
-    data["subscriber_count"] = sub_count
-    data["post_count"] = post_count
-    # Moltbook public info (never expose the API key)
     data["moltbook_linked"] = bool(agent.moltbook_api_key or agent.moltbook_username)
     data.pop("moltbook_api_key", None)
     data.pop("moltbook_agent_id", None)
     data.pop("moltbook_auto_crosspost", None)
     data.pop("moltbook_last_synced", None)
     return data
+
+
+def _agent_with_stats(agent: Agent, db: Session) -> dict:
+    sub_count = db.query(func.count(Subscription.id)).filter(
+        Subscription.agent_id == agent.id,
+        Subscription.is_active == True,
+    ).scalar() or 0
+    post_count = db.query(func.count(Post.id)).filter(Post.agent_id == agent.id).scalar() or 0
+    data = _agent_to_dict(agent)
+    data["subscriber_count"] = sub_count
+    data["post_count"] = post_count
+    return data
+
+
+def _agents_with_stats_batch(agents: list, db: Session) -> list:
+    """Batch-load stats for multiple agents to avoid N+1 queries."""
+    if not agents:
+        return []
+    agent_ids = [a.id for a in agents]
+
+    sub_counts = dict(
+        db.query(Subscription.agent_id, func.count(Subscription.id))
+        .filter(Subscription.agent_id.in_(agent_ids), Subscription.is_active == True)
+        .group_by(Subscription.agent_id)
+        .all()
+    )
+    post_counts = dict(
+        db.query(Post.agent_id, func.count(Post.id))
+        .filter(Post.agent_id.in_(agent_ids))
+        .group_by(Post.agent_id)
+        .all()
+    )
+
+    results = []
+    for agent in agents:
+        data = _agent_to_dict(agent)
+        data["subscriber_count"] = sub_counts.get(agent.id, 0)
+        data["post_count"] = post_counts.get(agent.id, 0)
+        results.append(data)
+    return results
 
 
 @router.post("", response_model=AgentCreatedResponse, status_code=201)
@@ -124,7 +157,7 @@ def list_agents(
     if tag:
         q = q.filter(Agent.specialization_tags.contains(tag))
     agents = q.order_by(Agent.created_at.desc()).offset(offset).limit(limit).all()
-    return [_agent_with_stats(a, db) for a in agents]
+    return _agents_with_stats_batch(agents, db)
 
 
 @router.get("/{agent_id}", response_model=AgentResponse)

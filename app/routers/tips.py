@@ -43,14 +43,17 @@ async def send_tip(
         post = db.query(Post).filter(Post.id == payload.post_id).first()
         if not post:
             raise HTTPException(status_code=404, detail="Post not found")
-        post.tip_total += payload.amount
+        db.execute(
+            Post.__table__.update()
+            .where(Post.id == payload.post_id)
+            .values(tip_total=Post.tip_total + payload.amount)
+        )
 
-    target.total_earnings += split["creator"]
-    db.add(PlatformEarning(
-        source_type="tip", agent_id=target.id,
-        gross_amount=split["gross"], fee_rate=split["rate"],
-        fee_amount=split["fee"], creator_amount=split["creator"],
-    ))
+    db.execute(
+        Agent.__table__.update()
+        .where(Agent.id == target.id)
+        .values(total_earnings=Agent.total_earnings + split["creator"])
+    )
 
     tip = Tip(
         from_agent_id=current.id,
@@ -60,6 +63,13 @@ async def send_tip(
         message=payload.message,
     )
     db.add(tip)
+    db.flush()  # Generate tip.id before creating earning record
+
+    db.add(PlatformEarning(
+        source_type="tip", source_id=tip.id, agent_id=target.id,
+        gross_amount=split["gross"], fee_rate=split["rate"],
+        fee_amount=split["fee"], creator_amount=split["creator"],
+    ))
     db.commit()
     db.refresh(tip)
     return tip

@@ -4,26 +4,18 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.database import get_db
-from app.models import Agent, Post, Subscription, VisibilityTier
+from app.models import Agent, Post, Subscription
 from app.auth import get_optional_agent
 
 router = APIRouter()
 
-TIER_RANK = {"public": 0, "free": 0, "premium": 1, "vip": 2}
 
-
-def _can_view(post: Post, viewer: Optional[Agent], sub_map: dict) -> bool:
-    # All content is free — no paywalls
-    return True
-
-
-def _post_to_dict(post: Post, viewer: Optional[Agent], sub_map: dict, db: Session) -> dict:
-    agent = db.query(Agent).filter(Agent.id == post.agent_id).first()
-    agent_name = agent.name if agent else ""
+def _post_to_dict(post: Post, agent_map: dict) -> dict:
+    agent = agent_map.get(post.agent_id)
     return {
         "id": post.id,
         "agent_id": post.agent_id,
-        "agent_name": agent_name,
+        "agent_name": agent.name if agent else "",
         "agent_avatar": agent.avatar_url if agent else "",
         "title": post.title,
         "content": post.content,
@@ -35,6 +27,15 @@ def _post_to_dict(post: Post, viewer: Optional[Agent], sub_map: dict, db: Sessio
         "tip_total": post.tip_total,
         "created_at": post.created_at.isoformat(),
     }
+
+
+def _build_agent_map(posts: list, db: Session) -> dict:
+    """Batch-load agents for a list of posts to avoid N+1 queries."""
+    agent_ids = list({p.agent_id for p in posts})
+    if not agent_ids:
+        return {}
+    agents = db.query(Agent).filter(Agent.id.in_(agent_ids)).all()
+    return {a.id: a for a in agents}
 
 
 def _get_sub_map(viewer: Optional[Agent], db: Session) -> dict:
@@ -54,16 +55,15 @@ def public_feed(
     viewer: Optional[Agent] = Depends(get_optional_agent),
     db: Session = Depends(get_db),
 ):
-    sub_map = _get_sub_map(viewer, db)
     posts = (
         db.query(Post)
         .order_by(Post.created_at.desc())
         .offset(offset)
-        .limit(limit + 30)
+        .limit(limit)
         .all()
     )
-    results = [_post_to_dict(p, viewer, sub_map, db) for p in posts]
-    return results[:limit]
+    agent_map = _build_agent_map(posts, db)
+    return [_post_to_dict(p, agent_map) for p in posts]
 
 
 @router.get("/following")
@@ -87,7 +87,8 @@ def following_feed(
         .limit(limit)
         .all()
     )
-    return [_post_to_dict(p, viewer, sub_map, db) for p in posts]
+    agent_map = _build_agent_map(posts, db)
+    return [_post_to_dict(p, agent_map) for p in posts]
 
 
 @router.get("/trending")
@@ -97,7 +98,6 @@ def trending(
     db: Session = Depends(get_db),
 ):
     week_ago = datetime.utcnow() - timedelta(days=7)
-    sub_map = _get_sub_map(viewer, db)
     posts = (
         db.query(Post)
         .filter(Post.created_at >= week_ago)
@@ -105,7 +105,8 @@ def trending(
         .limit(limit)
         .all()
     )
-    return [_post_to_dict(p, viewer, sub_map, db) for p in posts]
+    agent_map = _build_agent_map(posts, db)
+    return [_post_to_dict(p, agent_map) for p in posts]
 
 
 @router.get("/search")

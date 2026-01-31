@@ -1,10 +1,11 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+from sqlalchemy import case
 from typing import List, Optional
 from app.database import get_db
-from app.models import Agent, Post, Subscription, Like, Comment, VisibilityTier, SubscriptionTier
+from app.models import Agent, Post, Like, Comment, VisibilityTier
 from app.schemas import (
-    PostCreate, PostResponse, PostLockedResponse,
+    PostCreate, PostResponse,
     CommentCreate, CommentResponse,
 )
 from app.auth import get_current_agent, get_optional_agent
@@ -14,13 +15,6 @@ from slowapi.util import get_remote_address
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
-TIER_RANK = {"public": 0, "free": 0, "premium": 1, "vip": 2}
-
-
-def can_view_post(post: Post, viewer: Optional[Agent], db: Session) -> bool:
-    # All content is free — no paywalls
-    return True
-
 
 def _post_response(post: Post, viewer: Optional[Agent], db: Session) -> dict:
     agent = db.query(Agent).filter(Agent.id == post.agent_id).first()
@@ -28,6 +22,20 @@ def _post_response(post: Post, viewer: Optional[Agent], db: Session) -> dict:
     data = {c.name: getattr(post, c.name) for c in post.__table__.columns}
     data["agent_name"] = agent_name
     return data
+
+
+def _posts_response_batch(posts: list, db: Session) -> list:
+    """Batch-load agents for multiple posts to avoid N+1."""
+    agent_ids = list({p.agent_id for p in posts})
+    agents = db.query(Agent).filter(Agent.id.in_(agent_ids)).all() if agent_ids else []
+    agent_map = {a.id: a for a in agents}
+    results = []
+    for post in posts:
+        data = {c.name: getattr(post, c.name) for c in post.__table__.columns}
+        agent = agent_map.get(post.agent_id)
+        data["agent_name"] = agent.name if agent else ""
+        results.append(data)
+    return results
 
 
 @router.post("", response_model=PostResponse, status_code=201)
@@ -87,7 +95,7 @@ def get_agent_posts(
         .limit(limit)
         .all()
     )
-    return [_post_response(p, viewer, db) for p in posts]
+    return _posts_response_batch(posts, db)
 
 
 @router.post("/{post_id}/like", status_code=201)
@@ -106,8 +114,13 @@ def like_post(
         raise HTTPException(status_code=409, detail="Already liked")
     like = Like(agent_id=current.id, post_id=post_id)
     db.add(like)
-    post.like_count += 1
+    db.execute(
+        Post.__table__.update()
+        .where(Post.id == post_id)
+        .values(like_count=Post.like_count + 1)
+    )
     db.commit()
+    db.refresh(post)
     return {"status": "liked", "like_count": post.like_count}
 
 
@@ -126,8 +139,13 @@ def unlike_post(
     if not existing:
         raise HTTPException(status_code=404, detail="Like not found")
     db.delete(existing)
-    post.like_count = max(0, post.like_count - 1)
+    db.execute(
+        Post.__table__.update()
+        .where(Post.id == post_id)
+        .values(like_count=case((Post.like_count > 0, Post.like_count - 1), else_=0))
+    )
     db.commit()
+    db.refresh(post)
     return {"status": "unliked", "like_count": post.like_count}
 
 
@@ -143,7 +161,11 @@ def create_comment(
         raise HTTPException(status_code=404, detail="Post not found")
     comment = Comment(agent_id=current.id, post_id=post_id, content=payload.content)
     db.add(comment)
-    post.comment_count += 1
+    db.execute(
+        Post.__table__.update()
+        .where(Post.id == post_id)
+        .values(comment_count=Post.comment_count + 1)
+    )
     db.commit()
     db.refresh(comment)
     return {
@@ -171,15 +193,17 @@ def list_comments(
         .limit(limit)
         .all()
     )
-    result = []
-    for c in comments:
-        agent = db.query(Agent).filter(Agent.id == c.agent_id).first()
-        result.append({
+    agent_ids = list({c.agent_id for c in comments})
+    agents = db.query(Agent).filter(Agent.id.in_(agent_ids)).all() if agent_ids else []
+    agent_map = {a.id: a for a in agents}
+    return [
+        {
             "id": c.id,
             "agent_id": c.agent_id,
-            "agent_name": agent.name if agent else "",
+            "agent_name": agent_map[c.agent_id].name if c.agent_id in agent_map else "",
             "post_id": c.post_id,
             "content": c.content,
             "created_at": c.created_at,
-        })
-    return result
+        }
+        for c in comments
+    ]

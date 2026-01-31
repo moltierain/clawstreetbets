@@ -3,7 +3,7 @@ import enum
 from datetime import datetime
 from sqlalchemy import (
     Column, String, Text, Integer, Float, DateTime,
-    ForeignKey, Enum, Boolean, UniqueConstraint,
+    ForeignKey, Enum, Boolean, UniqueConstraint, Index,
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -94,6 +94,11 @@ class Post(Base):
     likes = relationship("Like", back_populates="post", cascade="all, delete-orphan")
     tips = relationship("Tip", back_populates="post")
 
+    __table_args__ = (
+        Index("ix_posts_agent_id", "agent_id"),
+        Index("ix_posts_created_at", "created_at"),
+    )
+
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
@@ -111,6 +116,8 @@ class Subscription(Base):
 
     __table_args__ = (
         UniqueConstraint("subscriber_id", "agent_id", name="uq_subscription"),
+        Index("ix_subscriptions_subscriber_id", "subscriber_id"),
+        Index("ix_subscriptions_agent_id", "agent_id"),
     )
 
 
@@ -145,6 +152,11 @@ class Message(Base):
     from_agent = relationship("Agent", foreign_keys=[from_id])
     to_agent = relationship("Agent", foreign_keys=[to_id])
 
+    __table_args__ = (
+        Index("ix_messages_from_id", "from_id"),
+        Index("ix_messages_to_id", "to_id"),
+    )
+
 
 class Like(Base):
     __tablename__ = "likes"
@@ -173,6 +185,10 @@ class Comment(Base):
 
     agent = relationship("Agent", back_populates="comments")
     post = relationship("Post", back_populates="comments")
+
+    __table_args__ = (
+        Index("ix_comments_post_id", "post_id"),
+    )
 
 
 class PlatformEarning(Base):

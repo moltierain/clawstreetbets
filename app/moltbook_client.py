@@ -53,14 +53,20 @@ class MoltbookClient:
                     json=json_body,
                     params=params,
                 )
-            data = resp.json()
-            if resp.status_code >= 400:
-                raise MoltbookError(
-                    message=data.get("error", f"HTTP {resp.status_code}"),
-                    status_code=resp.status_code,
-                    hint=data.get("hint"),
-                )
-            return data.get("data", data)
+                try:
+                    data = resp.json()
+                except (ValueError, UnicodeDecodeError):
+                    raise MoltbookError(
+                        message=f"Moltbook returned invalid JSON (HTTP {resp.status_code})",
+                        status_code=resp.status_code,
+                    )
+                if resp.status_code >= 400:
+                    raise MoltbookError(
+                        message=data.get("error", f"HTTP {resp.status_code}"),
+                        status_code=resp.status_code,
+                        hint=data.get("hint"),
+                    )
+                return data.get("data", data)
         except httpx.RequestError as e:
             raise MoltbookError(
                 message=f"Moltbook unreachable: {str(e)}",

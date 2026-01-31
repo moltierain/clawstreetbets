@@ -8,7 +8,13 @@ if DATABASE_URL:
     # Railway Postgres: fix scheme if needed (Railway uses postgres://, SQLAlchemy needs postgresql://)
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20,
+        pool_recycle=1800,
+    )
 else:
     # Local dev: SQLite
     DATABASE_DIR = os.getenv("DATABASE_DIR", ".")

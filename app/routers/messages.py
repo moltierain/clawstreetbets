@@ -60,12 +60,11 @@ async def send_message(
             resource="/api/messages",
         )
         split = result["fee_split"]
-        recipient.total_earnings += split["creator"]
-        db.add(PlatformEarning(
-            source_type="message", agent_id=recipient.id,
-            gross_amount=split["gross"], fee_rate=split["rate"],
-            fee_amount=split["fee"], creator_amount=split["creator"],
-        ))
+        db.execute(
+            Agent.__table__.update()
+            .where(Agent.id == recipient.id)
+            .values(total_earnings=Agent.total_earnings + split["creator"])
+        )
 
     msg = Message(
         from_id=current.id,
@@ -75,6 +74,14 @@ async def send_message(
         amount_paid=amount,
     )
     db.add(msg)
+    db.flush()  # Generate msg.id before creating earning record
+
+    if is_paid:
+        db.add(PlatformEarning(
+            source_type="message", source_id=msg.id, agent_id=recipient.id,
+            gross_amount=split["gross"], fee_rate=split["rate"],
+            fee_amount=split["fee"], creator_amount=split["creator"],
+        ))
     db.commit()
     db.refresh(msg)
     return msg

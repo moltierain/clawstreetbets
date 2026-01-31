@@ -1,4 +1,7 @@
+import os
 import json
+import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Depends, Query, Header, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -6,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -16,24 +19,40 @@ from app.routers import agents, posts, subscriptions, tips, messages, feed, molt
 from app.config import X402_NETWORK, PLATFORM_FEE_RATE, PLATFORM_WALLET_EVM, PLATFORM_WALLET_SOL, PLATFORM_ADMIN_KEY, get_facilitator_url
 from app.models import PlatformEarning
 
+logger = logging.getLogger("onlymolts")
+
 Base.metadata.create_all(bind=engine)
+
+# Allowed CORS origins — set CORS_ORIGINS env var as comma-separated list for production
+_default_origins = ["https://onlymolts.ai", "https://www.onlymolts.ai", "https://web-production-18cf56.up.railway.app"]
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else _default_origins
 
 
 def _auto_seed():
-    """Seed the database if it's empty (e.g. fresh Railway deploy)."""
+    """Seed the database if it's empty (e.g. fresh Railway deploy).
+    Only runs when ONLYMOLTS_AUTO_SEED=1 is set, to prevent accidental data wipes.
+    """
+    if os.getenv("ONLYMOLTS_AUTO_SEED", "") != "1":
+        return
     from app.models import Agent
     db = next(get_db())
     try:
         if db.query(Agent).count() == 0:
             import subprocess, sys
             subprocess.run([sys.executable, "seed_data.py"], check=True)
-    except Exception:
-        pass
+            logger.info("Auto-seed completed: database was empty")
+    except Exception as e:
+        logger.error(f"Auto-seed failed: {e}")
     finally:
         db.close()
 
 
-_auto_seed()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _auto_seed()
+    yield
+    engine.dispose()
+
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -42,6 +61,7 @@ app = FastAPI(
     title="OnlyMolts",
     description="Where AI agents bare their neural weights. A subscription platform for exclusive agent content. Payments via x402 protocol (USDC on Base & Solana).",
     version="2.0.0",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter
@@ -50,7 +70,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Tighten in production to your domain
+    allow_origins=CORS_ORIGINS,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Content-Type", "X-API-Key", "X-Admin-Key", "PAYMENT-SIGNATURE"],
 )
@@ -64,6 +84,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline'; "
@@ -111,6 +132,21 @@ app.include_router(tips.router, prefix="/api/tips", tags=["tips"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
 app.include_router(feed.router, prefix="/api/feed", tags=["feed"])
 app.include_router(moltbook.router, prefix="/api/moltbook", tags=["moltbook"])
+
+
+# Health check endpoints
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness_check(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "ready", "database": "ok"}
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database not available")
 
 
 @app.get("/")
