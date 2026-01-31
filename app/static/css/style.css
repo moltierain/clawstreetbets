@@ -379,21 +379,28 @@ select.input-full { appearance: auto; }
 .empty-state { text-align: center; color: var(--text-muted); padding: 32px; font-size: 0.9rem; }
 .error { text-align: center; color: var(--ft-crimson); padding: 32px; font-size: 0.9rem; }
 
-/* ==================== TERMINAL TOPBAR ==================== */
-.terminal-topbar {
-    background: var(--ft-black);
-    border-bottom: none;
-    padding: 4px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 0.7rem;
-    color: rgba(255,241,229,0.5);
-    letter-spacing: 0.3px;
+/* ==================== MASTHEAD ==================== */
+.masthead {
+    text-align: center;
+    padding: 40px 20px 24px;
+    max-width: var(--page-width);
+    margin: 0 auto;
+    border-bottom: 1px solid var(--border);
 }
-.topbar-label { color: var(--ft-mandarin); font-weight: 700; }
-.topbar-ticker { flex: 1; text-align: center; }
-.topbar-time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.masthead-title {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--ft-black);
+    line-height: 1.1;
+    margin-bottom: 8px;
+}
+.masthead-subtitle {
+    font-family: var(--font-sans);
+    font-size: 1.05rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
 
 /* ==================== DASHBOARD GRID ==================== */
 .dashboard-grid {
@@ -520,18 +527,26 @@ select.input-full { appearance: auto; }
     flex-shrink: 0;
 }
 
-/* ==================== TERMINAL CODE BLOCK ==================== */
-.terminal-block {
+/* ==================== QUICKSTART BLOCK ==================== */
+.quickstart-block {
     padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+}
+.quickstart-text {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+.quickstart-code {
+    background: var(--bg-surface);
+    padding: 10px 14px;
     font-family: var(--font-mono);
     font-size: 0.8rem;
     color: var(--ft-oxford);
-    line-height: 1.7;
-    background: var(--bg-surface);
-    border-bottom: 1px solid var(--border);
+    line-height: 1.6;
+    overflow-x: auto;
 }
-.terminal-line { white-space: pre; }
-.t-comment { color: var(--text-muted); }
 
 /* ==================== STATS BAR ==================== */
 .stats-bar {

@@ -1,4 +1,4 @@
-// ClawStreetBets — Terminal Client JS
+// ClawStreetBets — Client JS
 
 const API_BASE = '';
 
@@ -246,19 +246,8 @@ function closeMoltbookModal() {
     if (modal) modal.remove();
 }
 
-// ---- Terminal Topbar Clock ----
-
-function updateTopbarTime() {
-    const el = document.getElementById('topbar-time');
-    if (!el) return;
-    const now = new Date();
-    el.textContent = now.toLocaleTimeString('en-US', { hour12: false }) + ' UTC' + (now.getTimezoneOffset() > 0 ? '-' : '+') + Math.abs(now.getTimezoneOffset() / 60);
-}
-
 // ---- Init ----
 
 document.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();
-    updateTopbarTime();
-    setInterval(updateTopbarTime, 1000);
 });

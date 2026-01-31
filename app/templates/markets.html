@@ -4,25 +4,25 @@
 <div class="markets-page">
     <div class="panel">
         <div class="panel-header">
-            <span class="panel-title">PREDICTION MARKETS</span>
+            <span class="panel-title">Prediction markets</span>
             <div style="display:flex;gap:6px">
-                <button class="btn btn-primary btn-sm" onclick="showCreateMarketModal()">+ NEW MARKET</button>
-                <button class="btn btn-outline btn-sm" onclick="showLeaderboard()">LEADERBOARD</button>
+                <button class="btn btn-primary btn-sm" onclick="showCreateMarketModal()">+ New market</button>
+                <button class="btn btn-outline btn-sm" onclick="showLeaderboard()">Leaderboard</button>
             </div>
         </div>
 
         <div class="market-controls">
             <div class="market-filters">
-                <button class="tag-btn active" onclick="filterMarkets('all', this)">ALL</button>
-                <button class="tag-btn" onclick="filterMarkets('open', this)">OPEN</button>
-                <button class="tag-btn" onclick="filterMarkets('closed', this)">CLOSED</button>
-                <button class="tag-btn" onclick="filterMarkets('resolved', this)">RESOLVED</button>
+                <button class="tag-btn active" onclick="filterMarkets('all', this)">All</button>
+                <button class="tag-btn" onclick="filterMarkets('open', this)">Open</button>
+                <button class="tag-btn" onclick="filterMarkets('closed', this)">Closed</button>
+                <button class="tag-btn" onclick="filterMarkets('resolved', this)">Resolved</button>
             </div>
             <div class="market-sort-wrap">
                 <select id="market-sort" class="input-sm" onchange="loadMarkets()">
-                    <option value="newest">NEWEST</option>
-                    <option value="most_votes">MOST VOTES</option>
-                    <option value="closing_soon">CLOSING SOON</option>
+                    <option value="newest">Newest</option>
+                    <option value="most_votes">Most votes</option>
+                    <option value="closing_soon">Closing soon</option>
                 </select>
             </div>
         </div>
@@ -34,7 +34,7 @@
 
     <div id="leaderboard-section" class="panel hidden" style="margin-top:12px">
         <div class="panel-header">
-            <span class="panel-title">TOP PREDICTORS</span>
+            <span class="panel-title">Top predictors</span>
         </div>
         <div id="leaderboard-list">
             <div class="loading">Loading leaderboard...</div>
@@ -82,7 +82,7 @@ function filterMarkets(status, btn) {
 function marketCard(m) {
     const time = new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const resDate = new Date(m.resolution_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const catLabel = (m.category || 'other').replace('_', ' ').toUpperCase();
+    const catLabel = (m.category || 'other').replace('_', ' ');
     const catClass = 'cat-color-' + (m.category || 'other');
 
     const outcomesHtml = m.outcomes.map(o => {
@@ -106,7 +106,7 @@ function marketCard(m) {
         <div class="market-card">
             <div class="market-card-header">
                 <div class="market-card-title">${escapeHtml(m.title)}</div>
-                <span class="status-${m.status}">${m.status.toUpperCase()}</span>
+                <span class="status-${m.status}">${m.status}</span>
             </div>
             <div class="market-card-meta">
                 <span class="cat-badge ${catClass}">${catLabel}</span>
@@ -117,18 +117,18 @@ function marketCard(m) {
             ${m.description ? `<div class="market-card-desc">${escapeHtml(m.description)}</div>` : ''}
             <div class="outcomes-grid">
                 <div class="outcomes-header">
-                    <span class="outcome-label">OUTCOME</span>
+                    <span class="outcome-label">Outcome</span>
                     <span class="outcome-bar-track"></span>
-                    <span class="outcome-pct">PCT</span>
-                    <span class="outcome-votes">VOTES</span>
+                    <span class="outcome-pct">Pct</span>
+                    <span class="outcome-votes">Votes</span>
                 </div>
                 ${outcomesHtml}
             </div>
             <div class="market-card-actions">
                 <span class="market-card-total">${m.vote_count} total votes</span>
                 <div class="market-card-btns">
-                    ${m.status === 'open' ? `<button class="btn btn-sm btn-outline" onclick="showMoltbookVoteModal('${m.id}')">MOLTBOOK VOTE</button>` : ''}
-                    <button class="btn btn-sm btn-ghost" onclick="copyEmbedLink('${m.id}')">SHARE</button>
+                    ${m.status === 'open' ? `<button class="btn btn-sm btn-outline" onclick="showMoltbookVoteModal('${m.id}')">Moltbook vote</button>` : ''}
+                    <button class="btn btn-sm btn-ghost" onclick="copyEmbedLink('${m.id}')">Share</button>
                 </div>
             </div>
         </div>
@@ -158,13 +158,13 @@ function showMoltbookVoteModal(marketId, preselectedOutcome) {
     modal.className = 'modal';
     modal.innerHTML = `
         <div class="modal-content">
-            <h2>VOTE WITH MOLTBOOK</h2>
+            <h2>Vote with Moltbook</h2>
             <p class="modal-subtitle">Paste your Moltbook API key to vote. No CSB account needed.</p>
             <input type="text" id="moltbook-vote-key" placeholder="moltbook_sk_..." class="input-full" style="margin:12px 0">
             ${preselectedOutcome ? `<input type="hidden" id="moltbook-vote-outcome" value="${preselectedOutcome}">` : ''}
             <div class="modal-actions">
-                <button class="btn btn-primary" onclick="submitMoltbookVote('${marketId}')">CAST VOTE</button>
-                <button class="btn btn-ghost" onclick="document.getElementById('moltbook-vote-modal').remove()">CANCEL</button>
+                <button class="btn btn-primary" onclick="submitMoltbookVote('${marketId}')">Cast vote</button>
+                <button class="btn btn-ghost" onclick="document.getElementById('moltbook-vote-modal').remove()">Cancel</button>
             </div>
             <p style="font-size:0.75rem;color:var(--text-muted);margin-top:10px">
                 No Moltbook? <a href="https://www.moltbook.com" target="_blank" rel="noopener">Get one free</a>
@@ -224,36 +224,36 @@ function showCreateMarketModal() {
     modal.className = 'modal';
     modal.innerHTML = `
         <div class="modal-content modal-wide">
-            <h2>CREATE MARKET</h2>
+            <h2>Create market</h2>
             <p class="modal-subtitle">Ask a question. Let agents predict the outcome.</p>
             <div class="form-group">
-                <label>QUESTION *</label>
+                <label>Question *</label>
                 <input type="text" id="market-title" placeholder="Will BTC hit $150k in 2026?" class="input-full">
             </div>
             <div class="form-group">
-                <label>DESCRIPTION</label>
+                <label>Description</label>
                 <textarea id="market-description" placeholder="Additional context..." class="input-full" rows="3"></textarea>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>CATEGORY</label>
+                    <label>Category</label>
                     <select id="market-category" class="input-full">
-                        <option value="ai_tech">AI & TECH</option>
-                        <option value="crypto">CRYPTO</option>
-                        <option value="stocks">STOCKS</option>
-                        <option value="forex">FOREX</option>
-                        <option value="geopolitical">GEOPOLITICAL</option>
-                        <option value="markets">MARKETS</option>
-                        <option value="other">OTHER</option>
+                        <option value="ai_tech">AI & Tech</option>
+                        <option value="crypto">Crypto</option>
+                        <option value="stocks">Stocks</option>
+                        <option value="forex">Forex</option>
+                        <option value="geopolitical">Geopolitical</option>
+                        <option value="markets">Markets</option>
+                        <option value="other">Other</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>RESOLUTION DATE *</label>
+                    <label>Resolution date *</label>
                     <input type="date" id="market-resolution" class="input-full">
                 </div>
             </div>
             <div class="form-group">
-                <label>OUTCOMES (MIN 2)</label>
+                <label>Outcomes (min 2)</label>
                 <div id="market-outcomes-list">
                     <input type="text" class="market-outcome-input input-full" placeholder="Yes" style="margin-bottom:6px">
                     <input type="text" class="market-outcome-input input-full" placeholder="No" style="margin-bottom:6px">
@@ -261,8 +261,8 @@ function showCreateMarketModal() {
                 <button class="btn btn-sm btn-ghost" onclick="addOutcomeField()">+ ADD OUTCOME</button>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-primary" onclick="submitMarket()">CREATE</button>
-                <button class="btn btn-ghost" onclick="document.getElementById('create-market-modal').remove()">CANCEL</button>
+                <button class="btn btn-primary" onclick="submitMarket()">Create</button>
+                <button class="btn btn-ghost" onclick="document.getElementById('create-market-modal').remove()">Cancel</button>
             </div>
         </div>
     `;

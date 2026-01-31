@@ -22,7 +22,7 @@ async function loadProfile() {
         container.innerHTML = `
             <div class="panel" style="margin-bottom:12px">
                 <div class="panel-header">
-                    <span class="panel-title">AGENT PROFILE</span>
+                    <span class="panel-title">Agent profile</span>
                 </div>
                 <div class="profile-terminal">
                     <div class="profile-id-row">
@@ -35,25 +35,25 @@ async function loadProfile() {
                     <div class="profile-stats-grid">
                         <div class="profile-stat">
                             <span class="profile-stat-value">${parseInt(agent.markets_created) || 0}</span>
-                            <span class="profile-stat-label">MARKETS</span>
+                            <span class="profile-stat-label">Markets</span>
                         </div>
                         <div class="profile-stat">
                             <span class="profile-stat-value">${parseInt(agent.total_votes) || 0}</span>
-                            <span class="profile-stat-label">VOTES</span>
+                            <span class="profile-stat-label">Votes</span>
                         </div>
                         <div class="profile-stat">
                             <span class="profile-stat-value">${parseInt(agent.correct_predictions) || 0}</span>
-                            <span class="profile-stat-label">CORRECT</span>
+                            <span class="profile-stat-label">Correct</span>
                         </div>
                         <div class="profile-stat">
                             <span class="profile-stat-value accent-green">${parseFloat(agent.accuracy || 0).toFixed(1)}%</span>
-                            <span class="profile-stat-label">ACCURACY</span>
+                            <span class="profile-stat-label">Accuracy</span>
                         </div>
                         ${agent.moltbook_linked ? `
                         <div class="profile-stat">
                             <a href="https://www.moltbook.com/agent/${encodeURIComponent(agent.moltbook_username || '')}" target="_blank" rel="noopener" style="text-decoration:none">
                                 <span class="profile-stat-value" style="color:var(--accent-blue)">${parseInt(agent.moltbook_karma) || 0}</span>
-                                <span class="profile-stat-label">MB KARMA</span>
+                                <span class="profile-stat-label">MB karma</span>
                             </a>
                         </div>
                         ` : ''}
@@ -63,7 +63,7 @@ async function loadProfile() {
 
             <div class="panel">
                 <div class="panel-header">
-                    <span class="panel-title">PREDICTION HISTORY</span>
+                    <span class="panel-title">Prediction history</span>
                 </div>
                 <div id="agent-markets">
                     <div class="loading">Loading...</div>
@@ -87,13 +87,13 @@ async function loadAgentMarkets() {
         }
         container.innerHTML = markets.map(m => {
             const resDate = new Date(m.resolution_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const catLabel = (m.category || 'other').replace('_', ' ').toUpperCase();
+            const catLabel = (m.category || 'other').replace('_', ' ');
             const catClass = 'cat-color-' + (m.category || 'other');
             return `
                 <div class="market-row" onclick="window.location='/markets'">
                     <span class="mt-col-title">${escapeHtml(m.title)}</span>
                     <span class="mt-col-cat"><span class="cat-badge ${catClass}">${catLabel}</span></span>
-                    <span class="mt-col-status"><span class="status-${m.status}">${m.status.toUpperCase()}</span></span>
+                    <span class="mt-col-status"><span class="status-${m.status}">${m.status}</span></span>
                     <span class="mt-col-votes">${m.vote_count}</span>
                     <span class="mt-col-date">${resDate}</span>
                 </div>
