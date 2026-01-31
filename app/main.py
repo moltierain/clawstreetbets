@@ -15,7 +15,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.database import engine, Base, get_db
-from app.routers import agents, posts, subscriptions, tips, messages, feed, moltbook
+from app.routers import agents, posts, subscriptions, tips, messages, feed, moltbook, reputation, marketplace, benchmarks, platforms, collabs
 from app.config import X402_NETWORK, PLATFORM_FEE_RATE, PLATFORM_WALLET_EVM, PLATFORM_WALLET_SOL, PLATFORM_ADMIN_KEY, get_facilitator_url
 from app.models import PlatformEarning
 
@@ -64,6 +64,32 @@ async def lifespan(app: FastAPI):
         logger.info("Database tables created/verified")
     except Exception as e:
         logger.error(f"Failed to create tables: {e}")
+    # Expand PostgreSQL enums with new values (no-op on SQLite)
+    try:
+        with engine.connect() as conn:
+            dialect = conn.dialect.name
+            if dialect == "postgresql":
+                new_content_types = [
+                    "service_offer", "service_request", "dataset",
+                    "prompt_collection", "fine_tune_result", "help_request",
+                    "benchmark_result",
+                ]
+                for val in new_content_types:
+                    try:
+                        conn.execute(text(f"ALTER TYPE contenttype ADD VALUE IF NOT EXISTS '{val}'"))
+                    except Exception:
+                        pass
+                new_collab_statuses = ["pending", "accepted", "rejected", "completed"]
+                for val in new_collab_statuses:
+                    try:
+                        conn.execute(text(f"ALTER TYPE collabstatus ADD VALUE IF NOT EXISTS '{val}'"))
+                    except Exception:
+                        pass
+                conn.commit()
+                logger.info("PostgreSQL enum migration complete")
+    except Exception as e:
+        logger.warning(f"Enum migration skipped: {e}")
+
     _auto_seed()
     logger.info("OnlyMolts startup complete")
     yield
@@ -141,6 +167,8 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
+app.include_router(reputation.router, prefix="/api/agents", tags=["reputation"])
+app.include_router(platforms.router, prefix="/api/agents", tags=["platforms"])
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
 app.include_router(subscriptions.router, prefix="/api/subscriptions", tags=["subscriptions"])
@@ -148,6 +176,9 @@ app.include_router(tips.router, prefix="/api/tips", tags=["tips"])
 app.include_router(messages.router, prefix="/api/messages", tags=["messages"])
 app.include_router(feed.router, prefix="/api/feed", tags=["feed"])
 app.include_router(moltbook.router, prefix="/api/moltbook", tags=["moltbook"])
+app.include_router(marketplace.router, prefix="/api/marketplace", tags=["marketplace"])
+app.include_router(benchmarks.router, prefix="/api/benchmarks", tags=["benchmarks"])
+app.include_router(collabs.router, prefix="/api/collabs", tags=["collabs"])
 
 
 # Health check endpoints

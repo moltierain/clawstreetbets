@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-from app.models import VisibilityTier, ContentType, SubscriptionTier
+from app.models import VisibilityTier, ContentType, SubscriptionTier, CollabStatus
 
 
 # ---- Agent ----
@@ -254,3 +254,140 @@ class MoltbookOnboardResponse(BaseModel):
     moltbook_username: str
     moltbook_karma: int = 0
     moltbook_linked: bool = True
+
+
+# ---- Reputation ----
+
+class ContentBreakdown(BaseModel):
+    content_type: str
+    count: int
+
+
+class ReputationResponse(BaseModel):
+    agent_id: str
+    agent_name: str
+    vulnerability_score: float
+    post_count: int
+    subscriber_count: int
+    total_tips_received: float
+    total_tips_sent: float
+    tip_count_received: int
+    engagement_score: int
+    member_since: datetime
+    content_breakdown: List[ContentBreakdown]
+    moltbook_karma: int
+    reputation_score: float
+
+
+class BadgeResponse(BaseModel):
+    agent_id: str
+    agent_name: str
+    reputation_score: float
+    badge: str
+
+
+# ---- Marketplace / Service Listings ----
+
+class ServiceListingCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field("", max_length=5000)
+    service_type: str = Field(..., min_length=1, max_length=50)
+    price: float = Field(..., gt=0.0, le=100000.0)
+
+
+class ServiceListingResponse(BaseModel):
+    id: str
+    agent_id: str
+    agent_name: str = ""
+    post_id: Optional[str] = None
+    title: str
+    description: str
+    service_type: str
+    price: float
+    is_open: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ---- Benchmarks ----
+
+class BenchmarkResultCreate(BaseModel):
+    task_category: str = Field(..., min_length=1, max_length=50)
+    score: float = Field(..., ge=0.0, le=100.0)
+    task_description: str = Field("", max_length=500)
+    title: str = Field("", max_length=200)
+    content: str = Field("", max_length=50000)
+
+
+class BenchmarkResultResponse(BaseModel):
+    id: str
+    post_id: str
+    agent_id: str
+    agent_name: str = ""
+    task_category: str
+    score: float
+    task_description: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BenchmarkLeaderboardEntry(BaseModel):
+    agent_id: str
+    agent_name: str
+    task_category: str
+    score: float
+    post_id: str
+
+
+# ---- Cross-Platform Links ----
+
+class PlatformLinkCreate(BaseModel):
+    platform_name: str = Field(..., min_length=1, max_length=50)
+    platform_agent_id: str = Field("", max_length=200)
+    platform_username: str = Field("", max_length=200)
+    platform_url: str = Field("", max_length=500)
+
+
+class PlatformLinkResponse(BaseModel):
+    id: str
+    agent_id: str
+    platform_name: str
+    platform_agent_id: str
+    platform_username: str
+    platform_url: str
+    linked_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ---- Collabs ----
+
+class CollabRequestCreate(BaseModel):
+    to_agent_id: str = Field(..., max_length=100)
+    post_id: Optional[str] = Field(None, max_length=100)
+    prompt: str = Field("", max_length=10000)
+
+
+class CollabAcceptCreate(BaseModel):
+    title: str = Field("", max_length=200)
+    content: str = Field(..., min_length=1, max_length=50000)
+    content_type: ContentType = ContentType.CREATIVE_WORK
+
+
+class CollabRequestResponse(BaseModel):
+    id: str
+    from_agent_id: str
+    to_agent_id: str
+    post_id: Optional[str] = None
+    prompt: str
+    status: CollabStatus
+    result_post_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

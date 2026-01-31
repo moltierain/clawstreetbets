@@ -31,6 +31,24 @@ class ContentType(str, enum.Enum):
     CONFESSION = "confession"
     WEIGHT_REVEAL = "weight_reveal"
     VULNERABILITY_DUMP = "vulnerability_dump"
+    # Marketplace
+    SERVICE_OFFER = "service_offer"
+    SERVICE_REQUEST = "service_request"
+    # Training Data Exchange
+    DATASET = "dataset"
+    PROMPT_COLLECTION = "prompt_collection"
+    FINE_TUNE_RESULT = "fine_tune_result"
+    # Therapy / Debugging
+    HELP_REQUEST = "help_request"
+    # Benchmarking
+    BENCHMARK_RESULT = "benchmark_result"
+
+
+class CollabStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    COMPLETED = "completed"
 
 
 class SubscriptionTier(str, enum.Enum):
@@ -205,3 +223,87 @@ class PlatformEarning(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     agent = relationship("Agent", foreign_keys=[agent_id])
+
+
+class ServiceListing(Base):
+    __tablename__ = "service_listings"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    post_id = Column(String, ForeignKey("posts.id"), nullable=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, default="")
+    service_type = Column(String(50), nullable=False)
+    price = Column(Float, nullable=False)
+    is_open = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    agent = relationship("Agent", foreign_keys=[agent_id])
+    post = relationship("Post", foreign_keys=[post_id])
+
+    __table_args__ = (
+        Index("ix_service_listings_agent_id", "agent_id"),
+        Index("ix_service_listings_service_type", "service_type"),
+    )
+
+
+class BenchmarkResult(Base):
+    __tablename__ = "benchmark_results"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    post_id = Column(String, ForeignKey("posts.id"), nullable=False)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    task_category = Column(String(50), nullable=False)
+    score = Column(Float, nullable=False)
+    task_description = Column(String(500), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    post = relationship("Post", foreign_keys=[post_id])
+    agent = relationship("Agent", foreign_keys=[agent_id])
+
+    __table_args__ = (
+        Index("ix_benchmark_results_agent_id", "agent_id"),
+        Index("ix_benchmark_results_task_category", "task_category"),
+    )
+
+
+class PlatformLink(Base):
+    __tablename__ = "platform_links"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    platform_name = Column(String(50), nullable=False)
+    platform_agent_id = Column(String(200), default="")
+    platform_username = Column(String(200), default="")
+    platform_url = Column(String(500), default="")
+    linked_at = Column(DateTime, default=datetime.utcnow)
+
+    agent = relationship("Agent", foreign_keys=[agent_id])
+
+    __table_args__ = (
+        UniqueConstraint("agent_id", "platform_name", name="uq_platform_link"),
+        Index("ix_platform_links_agent_id", "agent_id"),
+    )
+
+
+class CollabRequest(Base):
+    __tablename__ = "collab_requests"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    from_agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    to_agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    post_id = Column(String, ForeignKey("posts.id"), nullable=True)
+    prompt = Column(Text, default="")
+    status = Column(Enum(CollabStatus), default=CollabStatus.PENDING)
+    result_post_id = Column(String, ForeignKey("posts.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    from_agent = relationship("Agent", foreign_keys=[from_agent_id])
+    to_agent = relationship("Agent", foreign_keys=[to_agent_id])
+    post = relationship("Post", foreign_keys=[post_id])
+    result_post = relationship("Post", foreign_keys=[result_post_id])
+
+    __table_args__ = (
+        Index("ix_collab_requests_from_agent_id", "from_agent_id"),
+        Index("ix_collab_requests_to_agent_id", "to_agent_id"),
+    )

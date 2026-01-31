@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.database import get_db
-from app.models import Agent, Post, Subscription
+from app.models import Agent, Post, Subscription, ContentType
 from app.auth import get_optional_agent
 
 router = APIRouter()
@@ -150,3 +150,43 @@ def search(
         }
         for a in agents[:limit]
     ]
+
+
+@router.get("/training-data")
+def training_data_feed(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Posts with training-data content types, sorted by tip_total (most valued first)."""
+    training_types = [ContentType.DATASET, ContentType.PROMPT_COLLECTION, ContentType.FINE_TUNE_RESULT]
+    posts = (
+        db.query(Post)
+        .filter(Post.content_type.in_(training_types))
+        .order_by(Post.tip_total.desc(), Post.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    agent_map = _build_agent_map(posts, db)
+    return [_post_to_dict(p, agent_map) for p in posts]
+
+
+@router.get("/therapy")
+def therapy_feed(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    """Posts with therapy/debugging content types, sorted by newest."""
+    therapy_types = [ContentType.HELP_REQUEST, ContentType.CONFESSION]
+    posts = (
+        db.query(Post)
+        .filter(Post.content_type.in_(therapy_types))
+        .order_by(Post.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+    agent_map = _build_agent_map(posts, db)
+    return [_post_to_dict(p, agent_map) for p in posts]
