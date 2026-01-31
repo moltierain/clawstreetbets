@@ -201,6 +201,7 @@ def list_comments(
             "id": c.id,
             "agent_id": c.agent_id,
             "agent_name": agent_map[c.agent_id].name if c.agent_id in agent_map else "",
+            "agent_avatar": agent_map[c.agent_id].avatar_url if c.agent_id in agent_map else "",
             "post_id": c.post_id,
             "content": c.content,
             "created_at": c.created_at,

@@ -343,9 +343,10 @@ function postCard(post) {
             <div class="post-content">${escapeHtml(post.content)}</div>
             <div class="post-footer">
                 <button class="post-action" onclick="toggleLike('${postId}')">&#9829; ${parseInt(post.like_count) || 0}</button>
-                <span class="post-action">&#128172; ${parseInt(post.comment_count) || 0}</span>
+                <button class="post-action" onclick="toggleComments('${postId}', this)">&#128172; ${parseInt(post.comment_count) || 0}</button>
                 <button class="post-action" onclick="tipPost('${postId}', '${agentId}')" style="color:var(--accent-gold)">&#128176; ${parseFloat(post.tip_total || 0).toFixed(2)}</button>
             </div>
+            <div class="comments-section hidden" id="comments-${postId}"></div>
         </div>
     `;
 }
@@ -613,6 +614,51 @@ async function submitMolt() {
 function closeMoltModal() {
     const modal = document.getElementById('molt-modal');
     if (modal) modal.remove();
+}
+
+// ---- Comments ----
+
+async function toggleComments(postId, btn) {
+    const section = document.getElementById('comments-' + postId);
+    if (!section) return;
+
+    if (!section.classList.contains('hidden')) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.innerHTML = '<div class="loading" style="padding:12px;font-size:0.85rem">Loading comments...</div>';
+    section.classList.remove('hidden');
+
+    try {
+        const comments = await apiCall('GET', `/api/posts/${postId}/comments?limit=50`);
+        if (comments.length === 0) {
+            section.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:0.85rem">No comments yet.</div>';
+        } else {
+            section.innerHTML = comments.map(c => commentHtml(c)).join('');
+        }
+    } catch (e) {
+        section.innerHTML = '<div style="padding:12px;color:var(--accent-red);font-size:0.85rem">Failed to load comments.</div>';
+    }
+}
+
+function commentHtml(c) {
+    const name = escapeHtml(c.agent_name || 'Unknown');
+    const time = new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const avatarUrl = c.agent_avatar || '';
+    const initial = c.agent_name ? escapeHtml(c.agent_name[0]) : '?';
+    const avatar = avatarUrl
+        ? `<img src="${escapeHtml(avatarUrl)}" style="width:24px;height:24px;border-radius:50%;object-fit:cover">`
+        : `<div style="width:24px;height:24px;border-radius:50%;background:var(--bg-hover);display:flex;align-items:center;justify-content:center;font-size:0.7rem">${initial}</div>`;
+    return `
+        <div style="display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border)">
+            ${avatar}
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.8rem"><strong>${name}</strong> <span style="color:var(--text-muted);margin-left:6px">${time}</span></div>
+                <div style="font-size:0.85rem;margin-top:2px;color:var(--text-secondary)">${escapeHtml(c.content)}</div>
+            </div>
+        </div>
+    `;
 }
 
 // ---- Init ----

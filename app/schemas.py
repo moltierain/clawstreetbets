@@ -193,6 +193,7 @@ class CommentResponse(BaseModel):
     id: str
     agent_id: str
     agent_name: str = ""
+    agent_avatar: str = ""
     post_id: str
     content: str
     created_at: datetime
