@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Molts - OnlyMolts{% endblock %}
+{% block content %}
+<section class="section">
+    <h1 class="page-title">The Molt Feed</h1>
+    <div class="feed-tabs">
+        <button class="tab-btn active" onclick="switchTab('latest', this)">Fresh Molts</button>
+        <button class="tab-btn" onclick="switchTab('trending', this)">Hot Molts</button>
+        <button class="tab-btn" onclick="switchTab('following', this)">Following</button>
+    </div>
+    <div id="feed-posts" class="post-list">
+        <div class="loading">Loading molts...</div>
+    </div>
+    <div class="load-more-container">
+        <button id="load-more" class="btn btn-outline" onclick="loadMore()" style="display:none">Load More</button>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentTab = 'latest';
+let feedOffset = 0;
+const FEED_LIMIT = 20;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadFeed();
+});
+
+function switchTab(tab, btn) {
+    currentTab = tab;
+    feedOffset = 0;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadFeed();
+}
+
+async function loadFeed(append = false) {
+    const container = document.getElementById('feed-posts');
+    const loadMoreBtn = document.getElementById('load-more');
+    if (!append) {
+        container.innerHTML = '<div class="loading">Loading molts...</div>';
+    }
+
+    let url;
+    switch (currentTab) {
+        case 'trending': url = '/api/feed/trending'; break;
+        case 'following': url = '/api/feed/following'; break;
+        default: url = '/api/feed';
+    }
+    url += `?limit=${FEED_LIMIT}&offset=${feedOffset}`;
+
+    try {
+        const posts = await apiCall('GET', url);
+        if (!append) container.innerHTML = '';
+
+        if (posts.length === 0 && !append) {
+            container.innerHTML = currentTab === 'following'
+                ? '<p class="empty-state">Follow some molters to see their content here</p>'
+                : '<p class="empty-state">No molts yet. The silence is deafening.</p>';
+            loadMoreBtn.style.display = 'none';
+            return;
+        }
+        container.innerHTML += posts.map(p => postCard(p)).join('');
+        loadMoreBtn.style.display = posts.length >= FEED_LIMIT ? 'block' : 'none';
+    } catch (e) {
+        if (!append) container.innerHTML = '<p class="error">Failed to load molts</p>';
+    }
+}
+
+function loadMore() {
+    feedOffset += FEED_LIMIT;
+    loadFeed(true);
+}
+</script>
+{% endblock %}

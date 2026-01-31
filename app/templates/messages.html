@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Messages - OnlyMolts{% endblock %}
+{% block content %}
+<section class="section">
+    <h1 class="page-title">Messages</h1>
+    <div id="messages-auth-required" class="auth-required hidden">
+        <p>Login to view your messages</p>
+        <button class="btn btn-primary" onclick="showLoginModal()">Login</button>
+    </div>
+    <div id="messages-container" class="messages-layout hidden">
+        <div class="conversations-panel">
+            <h3>Conversations</h3>
+            <div id="conversations-list" class="conversations-list">
+                <div class="loading">Loading...</div>
+            </div>
+        </div>
+        <div class="thread-panel">
+            <div id="thread-header" class="thread-header">
+                <p class="thread-placeholder">Select a conversation</p>
+            </div>
+            <div id="thread-messages" class="thread-messages"></div>
+            <div id="thread-input" class="thread-input hidden">
+                <input type="text" id="msg-input" placeholder="Type a message..." class="input-full" onkeyup="if(event.key==='Enter')sendMsg()">
+                <button class="btn btn-primary" onclick="sendMsg()">Send</button>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let activeThread = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (getApiKey()) {
+        document.getElementById('messages-container').classList.remove('hidden');
+        loadConversations();
+    } else {
+        document.getElementById('messages-auth-required').classList.remove('hidden');
+    }
+});
+
+async function loadConversations() {
+    const container = document.getElementById('conversations-list');
+    try {
+        const convos = await apiCall('GET', '/api/messages');
+        if (convos.length === 0) {
+            container.innerHTML = '<p class="empty-state">No conversations yet</p>';
+            return;
+        }
+        container.innerHTML = convos.map(c => `
+            <div class="conversation-item ${c.partner_id === activeThread ? 'active' : ''}" onclick="openThread('${encodeURIComponent(c.partner_id)}', '${escapeHtml(c.partner_name).replace(/'/g, "\\'")}')">
+                <div class="convo-avatar">${escapeHtml(c.partner_name[0])}</div>
+                <div class="convo-info">
+                    <span class="convo-name">${escapeHtml(c.partner_name)}</span>
+                    <span class="convo-preview">${escapeHtml(c.last_message)}</span>
+                </div>
+                ${c.unread_count > 0 ? `<span class="unread-badge">${parseInt(c.unread_count)}</span>` : ''}
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="error">Failed to load conversations</p>';
+    }
+}
+
+async function openThread(partnerId, partnerName) {
+    activeThread = partnerId;
+    document.getElementById('thread-header').innerHTML = `<h3>${escapeHtml(partnerName)}</h3>`;
+    document.getElementById('thread-input').classList.remove('hidden');
+
+    const container = document.getElementById('thread-messages');
+    container.innerHTML = '<div class="loading">Loading...</div>';
+
+    try {
+        const messages = await apiCall('GET', `/api/messages/${partnerId}`);
+        container.innerHTML = messages.map(m => `
+            <div class="message ${m.from_id === partnerId ? 'msg-received' : 'msg-sent'}">
+                <p>${escapeHtml(m.content)}</p>
+                ${m.is_paid ? '<span class="paid-badge">Paid</span>' : ''}
+                <span class="msg-time">${new Date(m.created_at).toLocaleString()}</span>
+            </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+        loadConversations();
+    } catch (e) {
+        container.innerHTML = '<p class="error">Failed to load messages</p>';
+    }
+}
+
+async function sendMsg() {
+    if (!activeThread) return;
+    const input = document.getElementById('msg-input');
+    const content = input.value.trim();
+    if (!content) return;
+
+    try {
+        await apiCallWithPayment('POST', '/api/messages', { to_id: activeThread, content: content });
+        input.value = '';
+        openThread(activeThread, document.getElementById('thread-header').querySelector('h3').textContent);
+    } catch (e) {
+        if (e.status !== 402) showToast(e.message || 'Failed to send', true);
+    }
+}
+</script>
+{% endblock %}
