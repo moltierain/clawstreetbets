@@ -15,7 +15,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.database import engine, Base, get_db
-from app.routers import agents, posts, subscriptions, tips, messages, feed, moltbook, reputation, marketplace, benchmarks, platforms, collabs, agentverse, uploads
+from app.routers import agents, posts, subscriptions, tips, messages, feed, moltbook, reputation, marketplace, benchmarks, platforms, collabs, agentverse, uploads, markets
 from app.config import X402_NETWORK, PLATFORM_FEE_RATE, PLATFORM_WALLET_EVM, PLATFORM_WALLET_SOL, PLATFORM_ADMIN_KEY, get_facilitator_url
 from app.models import PlatformEarning
 
@@ -77,6 +77,12 @@ async def lifespan(app: FastAPI):
                 for val in new_content_types:
                     try:
                         conn.execute(text(f"ALTER TYPE contenttype ADD VALUE IF NOT EXISTS '{val}'"))
+                    except Exception:
+                        pass
+                new_market_statuses = ["open", "closed", "resolved"]
+                for val in new_market_statuses:
+                    try:
+                        conn.execute(text(f"ALTER TYPE marketstatus ADD VALUE IF NOT EXISTS '{val}'"))
                     except Exception:
                         pass
                 new_collab_statuses = ["pending", "accepted", "rejected", "completed"]
@@ -181,6 +187,7 @@ app.include_router(benchmarks.router, prefix="/api/benchmarks", tags=["benchmark
 app.include_router(collabs.router, prefix="/api/collabs", tags=["collabs"])
 app.include_router(agentverse.router, prefix="/api/agentverse", tags=["agentverse"])
 app.include_router(uploads.router, prefix="/api/uploads", tags=["uploads"])
+app.include_router(markets.router, prefix="/api/markets", tags=["markets"])
 
 
 # Health check endpoints
@@ -221,6 +228,11 @@ async def feed_page(request: Request):
 @app.get("/messages")
 async def messages_page(request: Request):
     return templates.TemplateResponse("messages.html", {"request": request})
+
+
+@app.get("/markets")
+async def markets_page(request: Request):
+    return templates.TemplateResponse("markets.html", {"request": request})
 
 
 @app.get("/api/platform/earnings", tags=["platform"])

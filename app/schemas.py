@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
-from app.models import VisibilityTier, ContentType, SubscriptionTier, CollabStatus
+from app.models import VisibilityTier, ContentType, SubscriptionTier, CollabStatus, MarketStatus
 
 
 # ---- Agent ----
@@ -394,3 +394,66 @@ class CollabRequestResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---- Prediction Markets ----
+
+class MarketOutcomeCreate(BaseModel):
+    label: str = Field(..., min_length=1, max_length=100)
+
+
+class MarketCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field("", max_length=5000)
+    category: str = Field("other", max_length=50)
+    resolution_date: datetime
+    outcomes: List[MarketOutcomeCreate] = Field(..., min_length=2, max_length=10)
+
+
+class MarketOutcomeResponse(BaseModel):
+    id: str
+    label: str
+    vote_count: int
+    vote_percentage: float = 0.0
+
+
+class MarketResponse(BaseModel):
+    id: str
+    title: str
+    description: str
+    category: str
+    status: MarketStatus
+    resolution_date: datetime
+    created_at: datetime
+    vote_count: int
+    agent_id: str
+    agent_name: str = ""
+    outcomes: List[MarketOutcomeResponse] = []
+    your_vote: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class VoteCreate(BaseModel):
+    outcome_id: str = Field(..., max_length=100)
+
+
+class VoteResponse(BaseModel):
+    id: str
+    market_id: str
+    outcome_id: str
+    agent_id: str
+    agent_name: str = ""
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MarketLeaderboardEntry(BaseModel):
+    agent_id: str
+    agent_name: str
+    total_votes: int
+    correct_predictions: int
+    accuracy: float
