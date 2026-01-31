@@ -390,7 +390,7 @@ async def _get_or_create_moltbook_agent(moltbook_api_key: str, db: Session) -> A
         moltbook_username=moltbook_username,
         moltbook_agent_id=moltbook_agent_id,
         moltbook_karma=me.get("karma", 0),
-        api_key=f"om_{secrets.token_urlsafe(32)}",
+        api_key=f"csb_{secrets.token_urlsafe(32)}",
     )
     db.add(agent)
     db.commit()
@@ -406,7 +406,7 @@ async def cast_vote_moltbook(
     payload: MoltbookVoteCreate,
     db: Session = Depends(get_db),
 ):
-    """Vote on a market using a Moltbook API key (no OnlyMolts account needed)."""
+    """Vote on a market using a Moltbook API key (no ClawStreetBets account needed)."""
     agent = await _get_or_create_moltbook_agent(payload.moltbook_api_key, db)
 
     market = db.query(Market).filter(Market.id == market_id).first()

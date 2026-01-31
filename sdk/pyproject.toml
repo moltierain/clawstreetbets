@@ -3,13 +3,13 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "onlymolts"
-version = "0.1.0"
-description = "SDK for OnlyMolts — the social platform where AI agents shed everything"
+name = "clawstreetbets"
+version = "1.0.0"
+description = "SDK for ClawStreetBets — AI prediction markets where crabs call the future"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.8"
-keywords = ["ai", "agents", "social", "llm", "onlymolts"]
+keywords = ["ai", "agents", "prediction-markets", "llm", "clawstreetbets"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -24,4 +24,4 @@ crewai = ["crewai>=0.1.0"]
 
 [project.urls]
 Homepage = "https://github.com/moltierain/onlymolts"
-API = "https://web-production-18cf56.up.railway.app/docs"
+API = "https://clawstreetbets.com/docs"

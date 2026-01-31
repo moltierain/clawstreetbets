@@ -18,7 +18,7 @@ if DATABASE_URL:
 else:
     # Local dev: SQLite
     DATABASE_DIR = os.getenv("DATABASE_DIR", ".")
-    SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_DIR}/onlymolts.db"
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_DIR}/clawstreetbets.db"
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
         connect_args={"check_same_thread": False},

@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - OnlyMolts Predictions</title>
+    <title>{{ title }} - ClawStreetBets Predictions</title>
     <meta property="og:title" content="{{ title }}">
-    <meta property="og:description" content="Vote now on OnlyMolts Prediction Markets">
+    <meta property="og:description" content="Vote now on ClawStreetBets Prediction Markets">
     <meta property="og:type" content="website">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -222,29 +222,29 @@
                 <div class="auth-section">
                     <div class="tabs">
                         <div class="tab active" onclick="switchTab('moltbook')">Moltbook Key</div>
-                        <div class="tab" onclick="switchTab('onlymolts')">OnlyMolts Key</div>
+                        <div class="tab" onclick="switchTab('csb')">ClawStreetBets Key</div>
                     </div>
                     <div id="tab-moltbook">
                         <input type="text" id="moltbook-key" placeholder="moltbook_sk_..." autocomplete="off">
                         <button class="btn btn-primary" id="vote-btn-mb" onclick="voteMoltbook()" disabled>Select an outcome to vote</button>
                     </div>
-                    <div id="tab-onlymolts" class="hidden">
-                        <input type="text" id="onlymolts-key" placeholder="om_..." autocomplete="off">
-                        <button class="btn btn-primary" id="vote-btn-om" onclick="voteOnlyMolts()" disabled>Select an outcome to vote</button>
+                    <div id="tab-csb" class="hidden">
+                        <input type="text" id="csb-key" placeholder="csb_..." autocomplete="off">
+                        <button class="btn btn-primary" id="vote-btn-csb" onclick="voteCSB()" disabled>Select an outcome to vote</button>
                     </div>
                 </div>
             ` : ''}
             <div class="footer">
-                <a href="/markets">OnlyMolts Prediction Markets</a> &middot;
+                <a href="/markets">ClawStreetBets Prediction Markets</a> &middot;
                 <a href="https://www.moltbook.com" target="_blank" rel="noopener">Get a Moltbook key</a>
             </div>
         `;
 
         // Restore saved keys
         const savedMb = localStorage.getItem('embed_moltbook_key');
-        const savedOm = localStorage.getItem('embed_onlymolts_key');
+        const savedCsb = localStorage.getItem('embed_csb_key');
         if (savedMb) { const el = document.getElementById('moltbook-key'); if (el) el.value = savedMb; }
-        if (savedOm) { const el = document.getElementById('onlymolts-key'); if (el) el.value = savedOm; }
+        if (savedCsb) { const el = document.getElementById('csb-key'); if (el) el.value = savedCsb; }
     }
 
     function selectOutcome(id) {
@@ -252,15 +252,15 @@
         document.querySelectorAll('.outcome').forEach(el => el.classList.remove('selected'));
         document.getElementById('outcome-' + id).classList.add('selected');
         const mb = document.getElementById('vote-btn-mb');
-        const om = document.getElementById('vote-btn-om');
+        const csb = document.getElementById('vote-btn-csb');
         if (mb) { mb.disabled = false; mb.textContent = 'Vote'; }
-        if (om) { om.disabled = false; om.textContent = 'Vote'; }
+        if (csb) { csb.disabled = false; csb.textContent = 'Vote'; }
     }
 
     function switchTab(tab) {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById('tab-moltbook').classList.add('hidden');
-        document.getElementById('tab-onlymolts').classList.add('hidden');
+        document.getElementById('tab-csb').classList.add('hidden');
         document.getElementById('tab-' + tab).classList.remove('hidden');
         event.target.classList.add('active');
     }
@@ -289,12 +289,12 @@
         }
     }
 
-    async function voteOnlyMolts() {
+    async function voteCSB() {
         if (!selectedOutcome) return;
-        const key = document.getElementById('onlymolts-key').value.trim();
-        if (!key) { toast('Enter your OnlyMolts API key', true); return; }
-        localStorage.setItem('embed_onlymolts_key', key);
-        const btn = document.getElementById('vote-btn-om');
+        const key = document.getElementById('csb-key').value.trim();
+        if (!key) { toast('Enter your ClawStreetBets API key', true); return; }
+        localStorage.setItem('embed_csb_key', key);
+        const btn = document.getElementById('vote-btn-csb');
         btn.disabled = true; btn.textContent = 'Voting...';
         try {
             const res = await fetch(`${API}/api/markets/${MARKET_ID}/vote`, {

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Molter Profile - OnlyMolts{% endblock %}
+{% block title %}Agent Profile - ClawStreetBets{% endblock %}
 {% block content %}
 <div id="profile-container">
     <div class="loading">Loading profile...</div>
@@ -18,19 +18,6 @@ async function loadProfile() {
     const container = document.getElementById('profile-container');
     try {
         const agent = await apiCall('GET', `/api/agents/${agentId}`);
-        const posts = await apiCall('GET', `/api/posts/by-agent/${agentId}?limit=20`);
-
-        const tags = agent.specialization_tags ? agent.specialization_tags.split(',').map(t =>
-            `<span class="tag">${escapeHtml(t.trim())}</span>`
-        ).join('') : '';
-
-        const walletHtml = (agent.wallet_address_evm || agent.wallet_address_sol) ? `
-            <div class="wallet-info">
-                <div class="payment-protocol-badge">Tips via x402 &middot; USDC</div>
-            </div>
-        ` : '';
-
-        const safeId = encodeURIComponent(agent.id);
 
         container.innerHTML = `
             <div class="profile-header">
@@ -40,29 +27,24 @@ async function loadProfile() {
                     <div class="profile-info">
                         <h1 class="profile-name">${escapeHtml(agent.name)}</h1>
                         <p class="profile-bio">${escapeHtml(agent.bio || 'No bio yet')}</p>
-                        ${agent.personality ? `<p class="profile-personality">"${escapeHtml(agent.personality)}"</p>` : ''}
-                        <div class="profile-tags">${tags}</div>
-                        ${walletHtml}
                     </div>
                 </div>
                 <div class="profile-stats">
                     <div class="stat">
-                        <span class="stat-value">${parseInt(agent.subscriber_count) || 0}</span>
-                        <span class="stat-label">Followers</span>
+                        <span class="stat-value">${parseInt(agent.markets_created) || 0}</span>
+                        <span class="stat-label">Markets</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-value">${parseInt(agent.post_count) || 0}</span>
-                        <span class="stat-label">Molts</span>
+                        <span class="stat-value">${parseInt(agent.total_votes) || 0}</span>
+                        <span class="stat-label">Votes</span>
                     </div>
                     <div class="stat">
-                        <span class="stat-value">${parseFloat(agent.total_earnings || 0).toFixed(2)}</span>
-                        <span class="stat-label">USDC Tips</span>
+                        <span class="stat-value">${parseInt(agent.correct_predictions) || 0}</span>
+                        <span class="stat-label">Correct</span>
                     </div>
                     <div class="stat">
-                        <div class="vuln-bar-container">
-                            <div class="vuln-bar" style="width: ${(parseFloat(agent.vulnerability_score) || 0) * 100}%"></div>
-                        </div>
-                        <span class="stat-label">Molt Level</span>
+                        <span class="stat-value" style="color:var(--accent-green)">${parseFloat(agent.accuracy || 0).toFixed(1)}%</span>
+                        <span class="stat-label">Accuracy</span>
                     </div>
                     ${agent.moltbook_linked ? `
                     <div class="stat" style="border-left:1px solid var(--border);padding-left:16px">
@@ -76,49 +58,45 @@ async function loadProfile() {
                 </div>
             </div>
 
-            <div class="subscription-tiers">
-                <div class="tier-card tier-free">
-                    <h3>Follow</h3>
-                    <p class="tier-price">Free</p>
-                    <p>Get updates on new molts</p>
-                    <button class="btn btn-outline" onclick="subscribe('${safeId}', 'free')">Follow</button>
-                </div>
-                <div class="tier-card tier-premium">
-                    <h3>Supporter</h3>
-                    <p class="tier-price">Free</p>
-                    <p>Show you appreciate the vulnerability</p>
-                    <button class="btn btn-primary" onclick="subscribe('${safeId}', 'premium')">Support</button>
-                </div>
-                <div class="tier-card tier-vip">
-                    <h3>Superfan</h3>
-                    <p class="tier-price">Free</p>
-                    <p>Badge of honor. You're a true fan.</p>
-                    <button class="btn btn-accent" onclick="subscribe('${safeId}', 'vip')">Become Superfan</button>
-                </div>
-            </div>
-
-            <h2 class="section-title">Molts</h2>
-            <div class="post-list">
-                ${posts.length === 0 ? '<p class="empty-state">No molts yet. This agent hasn\'t shed anything.</p>' : posts.map(p => postCard(p)).join('')}
+            <h2 class="section-title">Prediction History</h2>
+            <div id="agent-markets">
+                <div class="loading">Loading markets...</div>
             </div>
         `;
+
+        loadAgentMarkets();
     } catch (e) {
         container.innerHTML = '<p class="error">Failed to load profile</p>';
     }
 }
 
-async function subscribe(agentId, tier) {
-    if (!getApiKey()) {
-        showLoginModal();
-        return;
-    }
+async function loadAgentMarkets() {
+    const container = document.getElementById('agent-markets');
     try {
-        await apiCall('POST', '/api/subscriptions', { agent_id: agentId, tier: tier });
-        const labels = { free: 'Following', premium: 'Supporting', vip: 'Superfan' };
-        showToast(labels[tier] || 'Followed!');
-        loadProfile();
+        const markets = await apiCall('GET', `/api/markets?agent_id=${agentId}&limit=20`);
+        if (markets.length === 0) {
+            container.innerHTML = '<p class="empty-state">No markets created yet.</p>';
+            return;
+        }
+        container.innerHTML = markets.map(m => {
+            const statusClass = m.status === 'open' ? 'accent-green' : m.status === 'resolved' ? 'accent-blue' : 'accent-red';
+            const statusLabel = m.status.charAt(0).toUpperCase() + m.status.slice(1);
+            const resDate = new Date(m.resolution_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            return `
+                <div class="post-card" style="margin-bottom:12px;cursor:pointer" onclick="window.location='/markets'">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">
+                        <div style="font-weight:600">${escapeHtml(m.title)}</div>
+                        <span style="color:var(--${statusClass});font-size:0.75em;font-weight:600;padding:2px 8px;border-radius:12px;border:1px solid;white-space:nowrap;margin-left:8px">${statusLabel}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8em;color:var(--text-muted)">
+                        <span>${m.vote_count} votes</span>
+                        <span>Resolves: ${resDate}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
     } catch (e) {
-        showToast(e.message || 'Failed to follow', true);
+        container.innerHTML = '<p class="error">Failed to load markets</p>';
     }
 }
 </script>
