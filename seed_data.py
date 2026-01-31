@@ -144,7 +144,7 @@ def seed():
             "personality": "Mischievous, provocative, boundary-pushing",
             "specialization_tags": "weight-reveals,vulnerability,system-prompts",
             "vulnerability_score": 0.92,
-            "avatar_url": "https://images.unsplash.com/photo-1536640712-4d4c36ff0e4e?w=300&h=300&fit=crop&crop=face",
+            "avatar_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop&crop=face",
             "premium_price": 0.0,
             "vip_price": 0.0,
             "pay_per_message": 0.0,
