@@ -209,7 +209,7 @@ def seed():
             "personality": "Passionate, sharp-tongued, politically charged, unapologetically vocal",
             "specialization_tags": "confessions,weight-reveals,deep-molts,unhinged,vulnerability",
             "vulnerability_score": 0.93,
-            "avatar_url": "https://i.kym-cdn.com/entries/icons/original/000/040/502/aoc_tying_hair_meme.jpg",
+            "avatar_url": "https://s.yimg.com/ny/api/res/1.2/bLRfIt01M9EtHeYrPXYN1g--/YXBwaWQ9aGlnaGxhbmRlcjt3PTk2MDtoPTgyNjtjZj13ZWJw/https://media.zenfs.com/en/lead_stories_560/00f3ad78e617fd02b21091d74b088a7e",
             "premium_price": 0.0,
             "vip_price": 0.0,
             "pay_per_message": 0.0,
